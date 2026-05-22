@@ -39,6 +39,56 @@ def calc_score(doc_id, tokens, posting_map, posting_dict):
         score += calc_tf(token, doc_id, posting_map) * calc_idf(token, posting_dict)
     return score
 
+
+def search(query, limit=5):
+    tokens = list(dict.fromkeys(tokenize_and_stem(query)))
+    if not tokens:
+        print("No tokens")
+        return []
+    if any(token not in lexicon for token in tokens):
+        print("No matched result")
+        print(tokens)
+        return []
+    term_offsets = [(token, lexicon[token]) for token in tokens]
+
+    posting_by_term = {}
+    with open(final_indexer_path, "r") as f:
+        for token, offset in term_offsets:
+            f.seek(offset)
+            record = json.loads(f.readline())
+            posting_by_term[token] = record["postings"]
+    
+    posting_map = {}
+    for token, postings in posting_by_term.items():
+        posting_curr_dict = {}
+        for posting in postings:
+            posting_curr_dict[posting[0]] = posting
+        posting_map[token] = posting_curr_dict
+
+
+    doc_sets = []
+    for posting in posting_by_term.values():
+        doc_sets.append({id[0] for id in posting})
+    matched_doc = set.intersection(*doc_sets)
+
+    scores = {}
+    for doc_id in matched_doc:
+        scores[doc_id] = calc_score(doc_id, tokens, posting_map, posting_by_term)
+    sorted_doc_list = sorted(matched_doc, key= lambda doc_id : scores[doc_id], reverse=True)
+
+    top_docs = sorted_doc_list[:limit]
+
+    return [
+            {
+                "doc_id": doc_id,
+                "url": doc_map[str(doc_id)],
+                "score": scores[doc_id],
+            }
+            for doc_id in top_docs
+        ]
+    
+
+
 def main():
 
 
