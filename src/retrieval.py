@@ -1,4 +1,4 @@
-from indexer import tokenize_and_stem
+from indexer_helpers import tokenize_and_stem
 from pathlib import Path
 import json
 import sys, signal
