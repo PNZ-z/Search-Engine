@@ -54,7 +54,7 @@ def merge_partial_indexes(partial_pattern, final_filename, final_lexicon_path):
                     next_line = files[same_file_id].readline()
                     if next_line:
                         next_record = json.loads(next_line)
-                        heapq.heappush(heap, (next_record["term"], file_id, next_record["postings"]))
+                        heapq.heappush(heap, (next_record["term"], same_file_id, next_record["postings"]))
                 offset = f.tell()
                 lexicon[term] = offset
 

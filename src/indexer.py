@@ -13,8 +13,9 @@ def main():
     partial_id = 0
     count = 0
     doc_map = {}
+    debug_map = {} #only for debug to find the corresponding file
     # declare and initialize dicts
-    for file_path in DATA_DIR.rglob("*.json"):
+    for file_path in DATA_DIR.rglob("*.json"): 
         try:
             with open(file_path, "r", encoding="utf-8") as f:
             
@@ -40,6 +41,11 @@ def main():
                 
                 doc_id += 1            
                 doc_map[doc_id] = page.get("url")
+
+                #for debug
+                debug_map[doc_id] = str(file_path)
+                
+                
                 for token, tf in reg_token_counter.items():
                     important_tf = imp_token_counter.get(token, 0)
                     posting = [doc_id, tf, important_tf]
@@ -81,6 +87,8 @@ def main():
     with open(BIN / "doc_map.json", "w", encoding="utf-8") as f:
         json.dump(doc_map, f)
 
+    with open(BIN / "debug_map.json", "w", encoding="utf-8") as f:
+        json.dump(debug_map, f)
     merge_indexes()
 
 if __name__ == "__main__":

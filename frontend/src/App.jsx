@@ -25,7 +25,7 @@ function App(){
                 <button className="search-button" type="submit">Search</button>
             </form>
             <ol className="results-list">
-                {results.map((result) => (<li className="result-item" key={result.doc_id} ><a href={result.url}>{result.url}</a>
+                {results.map((result) => (<li className="result-item" key={result.doc_id} ><a href={`http://127.0.0.1:5000/api/document/${result.doc_id}`}>{result.url}</a>
                 <div className="result-info">Doc ID: {result.doc_id}</div> <div className="result-info">Score: {result.score.toFixed(4)}</div></li>))}
             </ol>
         </main>
