@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from nltk.stem import PorterStemmer
 from collections import Counter
 from collections import defaultdict
+from hashlib import md5
 import json
 import re
 import heapq
@@ -102,3 +103,56 @@ def make_bigram(tokens):
         tokens[i] + " " + tokens[i+1]
         for i in range(len(tokens)-1)
     ]
+
+def stable_64_bit_hash(feature):
+    digest = md5(feature.encode("utf=8")).digest()
+    return int.from_bytes(digest[:8], 'big')
+
+def simhash(features):
+    vector = [0] * 64
+    counts = Counter(features)
+
+    for feature, weight in counts.items():
+        h = stable_64_bit_hash(feature)
+        for bit in range(64):
+            if h & (1 << bit):
+                vector[bit] += weight
+            else:
+                vector[bit] -= weight
+    
+    fingerprint = 0
+    for i in range(64):
+        if vector[i] > 0:
+            fingerprint |= (1 << i)
+    
+    return fingerprint
+
+def get_blocks(fingerprint):
+    blocks = []
+
+    for blockid in range(4):
+        block_value = fingerprint & (1 >> blockid*16)
+        blocks.append((blockid, block_value))
+
+    return blocks
+
+def hammingdistance(a, b):
+    return (a ^ b).bit_count()
+
+def find_near_duplicate(fingerprint, buckets, fingerprints):
+    candidate_doc_ids = set()
+
+    for block in get_blocks(fingerprint):
+        candidate_doc_ids.update(buckets.get(block, []))
+
+    for doc_id in candidate_doc_ids:
+        distance = hammingdistance(fingerprint, fingerprints[doc_id])
+        if distance <= 3:
+            return doc_id, distance
+        
+    return None, None
+
+def update_seen_hash(buckets, fingerprint, fingerprints, doc_id):
+    fingerprints[doc_id] = fingerprint
+    for block in get_blocks(fingerprint):
+        buckets.setdefault(block, []).append(doc_id)

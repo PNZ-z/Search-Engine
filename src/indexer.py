@@ -1,5 +1,5 @@
 from indexer_helpers import *
-
+import hashlib
 
 BIN.mkdir(exist_ok=True)
 def main():
@@ -13,6 +13,10 @@ def main():
     partial_id = 0
     count = 0
     doc_map = {}
+    seen_hashes = set() #the set of hashes for checking exact duplicate web
+    duplicate_webs = []
+    fingerprints = {}
+    simhash_buckets = {}
     debug_map = {} #only for debug to find the corresponding file
     # declare and initialize dicts
     for file_path in DATA_DIR.rglob("*.json"): 
@@ -29,21 +33,43 @@ def main():
                     tag.decompose()
                 text = soup.get_text(separator=" ", strip=True)
 
-                important_text = " ".join(tag.get_text(" ", strip=True) for tag in soup.find_all(["title", "h1", "h2", "h3", "b", "strong"]))
-                important_tokens = tokenize_and_stem(important_text)
-                imp_token_counter = Counter(important_tokens)
-
                 tokens = tokenize_and_stem(text)
-                bigram = make_bigram(tokens)
-                reg_token_counter = Counter(tokens)
-                bigram_counter = Counter(bigram)
-                
+
+                #check duplicate here
+                normalized_text = " ".join(text.lower().split())
+                hashvalue = hashlib.sha256(normalized_text.encode("utf-8")).digest()
+                if hashvalue in seen_hashes:
+                    duplicate_webs.append(str(file_path))
+                    continue
+                else:
+                    seen_hashes.add(hashvalue)
+
+                #check near duplicate using md5 and simhash
+                fingerprint = simhash(tokens)
+                near_doc_id, simhash_distance = find_near_duplicate(fingerprint, simhash_buckets, fingerprints)
+                if near_doc_id is not None:
+                    duplicate_webs.append(str(file_path))
+                    continue
                 
                 doc_id += 1            
                 doc_map[doc_id] = page.get("url")
 
                 #for debug
                 debug_map[doc_id] = str(file_path)
+
+                update_seen_hash(simhash_buckets, fingerprint, fingerprints, doc_id)
+
+                important_text = " ".join(tag.get_text(" ", strip=True) for tag in soup.find_all(["title", "h1", "h2", "h3", "b", "strong"]))
+                important_tokens = tokenize_and_stem(important_text)
+                imp_token_counter = Counter(important_tokens)
+
+                # tokens = tokenize_and_stem(text)
+                bigram = make_bigram(tokens)
+                reg_token_counter = Counter(tokens)
+                bigram_counter = Counter(bigram)
+                
+                
+                
                 
                 
                 for token, tf in reg_token_counter.items():
@@ -87,9 +113,15 @@ def main():
     with open(BIN / "doc_map.json", "w", encoding="utf-8") as f:
         json.dump(doc_map, f)
 
+    with open(BIN / "duplicateWebs.txt", "w", encoding="utf-8") as f:
+        for line in duplicate_webs:
+            f.write(line + "\n")
+
     with open(BIN / "debug_map.json", "w", encoding="utf-8") as f:
         json.dump(debug_map, f)
     merge_indexes()
+
+
 
 if __name__ == "__main__":
     main()
