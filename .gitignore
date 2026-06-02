@@ -1,5 +1,5 @@
-data/
 bin/
+data/
 index/
 *.zip
 __pycache__/

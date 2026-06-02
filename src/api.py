@@ -17,7 +17,7 @@ with open(BIN / "debug_map.json", "r", encoding="utf-8") as f:
 @app.route("/api/search")
 def search_api():
     query = request.args.get("q", "")
-    results = search(query, 5)
+    results = search(query, 10)
     return jsonify(results)
 
 @app.route("/api/document/<int:doc_id>")
