@@ -17,6 +17,8 @@ def main():
     duplicate_webs = []
     fingerprints = {}
     simhash_buckets = {}
+    doc_lengths = {}
+    skipped_non_html = []
     debug_map = {} #only for debug to find the corresponding file
     # declare and initialize dicts
     for file_path in DATA_DIR.rglob("*.json"): 
@@ -25,6 +27,9 @@ def main():
             
                 page = json.load(f)
                 content = page.get("content") or ""
+                if not is_probably_html_page(content):
+                    skipped_non_html.append(relative_path(file_path, DATA_DIR))
+                    continue
                 soup = parse_html(content)
                 if soup is None:
                     text = content
@@ -34,7 +39,7 @@ def main():
                 text = soup.get_text(separator=" ", strip=True)
 
                 tokens = tokenize_and_stem(text)
-
+                
                 #check duplicate here
                 normalized_text = " ".join(text.lower().split())
                 hashvalue = hashlib.sha256(normalized_text.encode("utf-8")).digest()
@@ -53,7 +58,7 @@ def main():
                 
                 doc_id += 1            
                 doc_map[doc_id] = page.get("url")
-
+                doc_lengths[doc_id] = len(tokens)
                 #for debug
                 debug_map[doc_id] = str(file_path)
 
@@ -119,8 +124,10 @@ def main():
 
     with open(BIN / "debug_map.json", "w", encoding="utf-8") as f:
         json.dump(debug_map, f)
+    with open(BIN / "doc_lengths.json", "w", encoding="utf-8") as f:
+        json.dump(doc_lengths, f)
     merge_indexes()
-
+    
 
 
 if __name__ == "__main__":

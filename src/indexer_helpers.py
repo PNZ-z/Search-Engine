@@ -13,6 +13,50 @@ BIN = PROJECT_ROOT/"bin"
 BATCH_SIZE = 500
 stemmer = PorterStemmer()
 # cur example: {"term": "0000", "postings": [[171, 1, 0]]}  term, [[doc_id, tf, important tf], [doc_id, ... , ...]]
+
+import re
+
+HTML_TAG_PATTERN = re.compile(
+    r"<\s*(html|head|body|title|p|div|span|a|h1|h2|h3|ul|ol|li|table|tr|td|strong|b|br)\b",
+    re.IGNORECASE
+)
+
+def is_probably_html_page(content):
+    if not content:
+        return False
+
+    stripped = content.strip()
+
+    if len(stripped) < 50:
+        return False
+
+    # Reject obvious plain text: no common HTML tags at all.
+    if not HTML_TAG_PATTERN.search(stripped):
+        return False
+
+    soup = parse_html(content)
+
+    if soup is None:
+        return False
+
+    for tag in soup.find_all(["script", "style"]):
+        tag.decompose()
+
+    text = soup.get_text(separator=" ", strip=True)
+    tokens = re.findall(r"[A-Za-z0-9]+", text)
+
+    # Avoid indexing pages with almost no searchable content.
+    if len(tokens) < 5:
+        return False
+
+    return True
+
+def relative_path(path, base):
+    try:
+        return str(path.relative_to(base))
+    except ValueError:
+        return str(path)
+    
 def parse_html(content):
     try:
         return BeautifulSoup(content, "lxml")

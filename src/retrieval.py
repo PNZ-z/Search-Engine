@@ -8,7 +8,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data" / "developer" / "DEV"
 BIN = PROJECT_ROOT/"bin"
 
-
+LENGTH_B = 0.5
+BIGRAM_WEIGHT = 3
+IMPORTANT_TF_WEIGHT = 2
 def graceful_exit(signum, frame):
     print(f"\nSignal {signum} received. Exiting...")
     sys.exit(0)
@@ -27,13 +29,32 @@ with open(bigram_lexicon_path, "r") as f:
 with open(BIN / "doc_map.json", "r", encoding="utf-8") as f:
     doc_map = json.load(f)
     N = len(doc_map)
+with open(BIN / "doc_lengths.json", "r", encoding="utf-8") as f:
+    doc_lengths = json.load(f)
+
+avg_doc_length = sum(doc_lengths.values()) / len(doc_lengths)
+
+def length_norm_factor(doc_id):
+    doc_length = doc_lengths[str(doc_id)]
+    return 1 - LENGTH_B + LENGTH_B * (doc_length / avg_doc_length)
+
 
 def calc_tf(token, doc_id, posting_map):
     posting = posting_map[token][doc_id]
-    return 1+math.log(posting[1] + 2*posting[2])\
-    
+    tf = posting[1]
+    important_tf = posting[2]
+
+    score = 1 + math.log(tf)
+
+    if important_tf > 0:
+        score += IMPORTANT_TF_WEIGHT * (1 + math.log(important_tf))
+
+    return score
+
 def calc_tf_bigram(token, doc_id, posting_map):
     # print(posting_map)
+    if token not in posting_map:
+        return 0
     if doc_id not in posting_map[token]:
         return 0
     posting = posting_map[token][doc_id]
@@ -50,7 +71,8 @@ def calc_score(doc_id, unigram_tokens, unigram_posting_map,  bigram_tokens, bigr
     for token in unigram_tokens:
         score += calc_tf(token, doc_id, unigram_posting_map) * calc_idf(token, unigram_posting_by_term)
     for token in bigram_tokens:
-        score += 10 * (calc_tf_bigram(token, doc_id, bigram_posting_map)) * calc_idf(token, bigram_posting_by_term)
+        score += BIGRAM_WEIGHT * (calc_tf_bigram(token, doc_id, bigram_posting_map)) * calc_idf(token, bigram_posting_by_term)
+    score /= length_norm_factor(doc_id)
     return score
 
 # load postings from the file in to the correspond dict of posting
@@ -100,7 +122,14 @@ def search(query, limit=5):
         ]
     else:
         bigram_tokens = []
-    term_bigram_offsets = [(token, bigram_lexicon[token]) for token in bigram_tokens]
+    bigram_tokens = [
+        token for token in bigram_tokens
+        if token in bigram_lexicon
+    ]
+    
+    term_bigram_offsets = [(token, bigram_lexicon[token]) for token in bigram_tokens if token in bigram_lexicon]
+
+    
 
     posting_by_term = {}
     posting_by_term_bigram = {}
