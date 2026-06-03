@@ -53,7 +53,9 @@ def main():
                 fingerprint = simhash(tokens)
                 near_doc_id, simhash_distance = find_near_duplicate(fingerprint, simhash_buckets, fingerprints)
                 if near_doc_id is not None:
-                    duplicate_webs.append(str(file_path))
+                    duplicate_webs.append(
+                        f"{relative_path(file_path, DATA_DIR)} near duplicate of doc {near_doc_id}, distance={simhash_distance}"
+                    )
                     continue
                 
                 doc_id += 1            

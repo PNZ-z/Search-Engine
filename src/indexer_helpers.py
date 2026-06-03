@@ -149,7 +149,7 @@ def make_bigram(tokens):
     ]
 
 def stable_64_bit_hash(feature):
-    digest = md5(feature.encode("utf=8")).digest()
+    digest = md5(feature.encode("utf-8")).digest()
     return int.from_bytes(digest[:8], 'big')
 
 def simhash(features):
@@ -175,7 +175,7 @@ def get_blocks(fingerprint):
     blocks = []
 
     for blockid in range(4):
-        block_value = fingerprint & (1 >> blockid*16)
+        block_value = (fingerprint >> (blockid * 16)) & ((1 << 16) - 1)
         blocks.append((blockid, block_value))
 
     return blocks
