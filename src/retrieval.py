@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import sys, signal
 import math
+import time
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data" / "developer" / "DEV"
@@ -104,6 +105,7 @@ def fetch_doc_list(posting_by_term, unigram_tokens, unigram_posting_map, bigram_
     return sorted_doc_list
 
 def search(query, limit=5):
+    start_time = time.perf_counter()
     tokens = list(dict.fromkeys(tokenize_and_stem(query)))
     if not tokens:
         print("No tokens")
@@ -156,6 +158,9 @@ def search(query, limit=5):
     sorted_doc_list = sorted(matched_doc, key= lambda doc_id : scores[doc_id], reverse=True)
 
     top_docs = sorted_doc_list[:limit]
+
+    elapsed_ms = (time.perf_counter() - start_time) * 1000
+    print(f"Search time: {elapsed_ms:.2f} ms")
 
     return [
             {

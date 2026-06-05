@@ -18,7 +18,7 @@ function App(){
 
     return(
         <main className="mainpage">
-            <h1>Search Engine -- June</h1>
+            <h1>Search Engine</h1>
             <form className="search-form" onSubmit={handleSearch}>
                 <input value={query}
                     onChange={(event) => setQuery(event.target.value)}/>
