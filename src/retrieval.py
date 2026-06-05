@@ -110,11 +110,12 @@ def search(query, limit=5):
     if not tokens:
         print("No tokens")
         return []
-    if any(token not in unigram_lexicon for token in tokens):
+    if all(token not in unigram_lexicon for token in tokens):
         print("No matched result")
         print(tokens)
         print(len(unigram_lexicon))
         return []
+    tokens = [token for token in tokens if token in unigram_lexicon]
     term_offsets = [(token, unigram_lexicon[token]) for token in tokens]
 
     if(len(tokens) > 1):
